@@ -1,4 +1,4 @@
-package org.vvcephei.liftapi
+package org.vvcephei.opensocial
 
 import net.liftweb.http.rest.RestHelper
 import net.liftweb.http.{GetRequest, Req}

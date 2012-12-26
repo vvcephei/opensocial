@@ -1,4 +1,4 @@
-name := "lift-api-skeleton"
+name := "opensocial"
 
 version := "0.0"
 
