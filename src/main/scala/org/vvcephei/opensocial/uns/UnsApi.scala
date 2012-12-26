@@ -1,6 +1,6 @@
 package org.vvcephei.opensocial.uns
 
-import data.{NameServer, InMemoryNameServerDAO, InMemoryUserDAO}
+import data.{User, NameServer, InMemoryNameServerDAO, InMemoryUserDAO}
 import net.liftweb.http.rest.RestHelper
 import net.liftweb.http._
 import net.liftweb.json.JsonAST.JString
@@ -61,8 +61,18 @@ object UnsApi extends RestHelper {
 
   serve("uns" / "api" / "lookup" prefix {
     case request => request match {
-      case Req(CompletedPath(path), "json", GetRequest) => userDAO.find(path.id).map(JsonResponse(_))
-      case Req(PartialPath(path), "json", GetRequest) => JString("defer to other nameserver: %s".format(path)) //FIXME
+      case JsonGet(CompletedPath(path), _) => userDAO.find(path.id).map(JsonResponse(_))
+      case JsonGet(PartialPath(path), _) => JString("defer to other nameserver: %s".format(path)) //FIXME
+
+      case JsonDelete(CompletedPath(path), _) => userDAO.remove(path.id).map(JsonResponse(_))
+      case JsonDelete(PartialPath(path), _) => JString("defer to other nameserver: %s".format(path)) //FIXME
+
+      case JsonPut(CompletedPath(path), (User(user), _)) => userDAO.add(user.copy(id = Some(path.id))).map(JsonResponse(_))
+      case JsonPut(PartialPath(path), _) => JString("defer to other nameserver: %s".format(path)) //FIXME
+
+      case JsonPost(CompletedPath(path), json) => JString(json.toString())
+      case JsonPost(PartialPath(path), _) => JString("defer to other nameserver: %s".format(path)) //FIXME
+
     }
   }
   )
