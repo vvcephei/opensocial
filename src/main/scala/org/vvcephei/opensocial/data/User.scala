@@ -5,7 +5,10 @@ import net.liftweb.json.{Extraction, Xml}
 import net.liftweb.json.JsonAST.JValue
 import net.liftweb.util.Helpers
 
-case class User(id: Option[String], name: Option[String])
+case class User(id: Option[String],
+                name: Option[String],
+                keyServers: Option[List[String]],
+                peers: Option[List[String]])
 
 object User {
   private implicit val formats = net.liftweb.json.DefaultFormats
@@ -23,7 +26,7 @@ object User {
    */
   def unapply(in: Any) = {
     in match {
-      case i: User => Some((i.id, i.name))
+      case i: User => Some((i.id, i.name, i.keyServers, i.peers))
       case _ => None
     }
   }
@@ -66,17 +69,11 @@ object User {
 
 }
 
-trait UserDAO {
-  def find(s: String): Option[User]
-
-  def remove(s: String): Option[User]
-
-  def add(user: User): Option[User]
-}
-
-object InMemoryUserDAO extends UserDAO {
+object InMemoryUserDAO extends DAO[User] {
   val db: scala.collection.mutable.Map[String, User] =
-    scala.collection.mutable.Map(List(User(Some("3F2504E0-4F89-11D3-9A0C-0305E82C3301"), Some("John"))).map(u => (u.id.getOrElse(""), u)): _*)
+    scala.collection.mutable.Map(List(User(Some("3F2504E0-4F89-11D3-9A0C-0305E82C3301"), Some("John"), Some(Nil), Some(Nil))).map(u => (u.id.getOrElse(""), u)): _*)
+
+  def list() = db.values
 
   def find(s: String) = db.get(s)
 
@@ -90,4 +87,30 @@ object InMemoryUserDAO extends UserDAO {
       case _ => None
     }
   })
+
+  def update(id: String, update: User) = db.get(id) match {
+    case None => None
+    case Some(user) =>
+      val newName = update.name match {
+        case None => user.name
+        case x => x
+      }
+      val newKS = update.keyServers match {
+        case None => user.keyServers
+        case x => x
+      }
+      val newPeers = update.peers match {
+        case None => user.peers
+        case x => x
+      }
+      update.id match {
+        case None =>
+          db(id) = User(Some(id), newName, newKS, newPeers)
+          db.get(id)
+        case Some(updateId) =>
+          db(updateId) = User(Some(id), newName, newKS, newPeers)
+          db.remove(id)
+          db.get(updateId)
+      }
+  }
 }

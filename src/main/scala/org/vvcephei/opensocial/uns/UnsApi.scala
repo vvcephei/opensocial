@@ -1,16 +1,16 @@
 package org.vvcephei.opensocial.uns
 
-import data.{User, NameServer, InMemoryNameServerDAO, InMemoryUserDAO}
+import data._
 import net.liftweb.http.rest.RestHelper
 import net.liftweb.http._
-import net.liftweb.json.JsonAST.JString
+import net.liftweb.json.Extraction
 import net.liftweb.json.JsonAST.JString
 import scala.Some
 
 object UnsApi extends RestHelper {
-  val userDAO = InMemoryUserDAO
   val nameServerDAO = InMemoryNameServerDAO
   val nameServerIdentity = "root" :: Nil
+  val userDAO = InMemoryUserDAO
 
   case class CompletedPath(path: List[String], id: String)
 
@@ -55,25 +55,24 @@ object UnsApi extends RestHelper {
     }
   }
 
-  serve("uns" / "api" prefix {
-    case List("test") JsonGet _ => JString("static test")
+  serve("api" / "uns" / "lookup" prefix {
+    case JsonGet(CompletedPath(path), _) => userDAO.find(path.id).map(JsonResponse(_))
+    case JsonGet(PartialPath(path), _) => JString("defer to other nameserver: %s".format(path)) //FIXME
   })
 
-  serve("uns" / "api" / "lookup" prefix {
-    case request => request match {
-      case JsonGet(CompletedPath(path), _) => userDAO.find(path.id).map(JsonResponse(_))
-      case JsonGet(PartialPath(path), _) => JString("defer to other nameserver: %s".format(path)) //FIXME
+  serve("api" / "uns" / "users" prefix {
+    case JsonGet(Nil, _) => Extraction.decompose(userDAO.list())
 
-      case JsonDelete(CompletedPath(path), _) => userDAO.remove(path.id).map(JsonResponse(_))
-      case JsonDelete(PartialPath(path), _) => JString("defer to other nameserver: %s".format(path)) //FIXME
+    case JsonGet(CompletedPath(path), _) => userDAO.find(path.id).map(JsonResponse(_))
+    case JsonGet(PartialPath(path), _) => JString("defer to other nameserver: %s".format(path)) //FIXME
 
-      case JsonPut(CompletedPath(path), (User(user), _)) => userDAO.add(user.copy(id = Some(path.id))).map(JsonResponse(_))
-      case JsonPut(PartialPath(path), _) => JString("defer to other nameserver: %s".format(path)) //FIXME
+    case JsonDelete(CompletedPath(path), _) => userDAO.remove(path.id).map(JsonResponse(_))
+    case JsonDelete(PartialPath(path), _) => JString("defer to other nameserver: %s".format(path)) //FIXME
 
-      case JsonPost(CompletedPath(path), json) => JString(json.toString())
-      case JsonPost(PartialPath(path), _) => JString("defer to other nameserver: %s".format(path)) //FIXME
+    case JsonPut(CompletedPath(path), (User(user), _)) => userDAO.add(user.copy(id = Some(path.id))).map(JsonResponse(_))
+    case JsonPut(PartialPath(path), _) => JString("defer to other nameserver: %s".format(path)) //FIXME
 
-    }
-  }
-  )
+    case JsonPost(CompletedPath(path), (User(user), _)) => userDAO.update(path.id, user).map(JsonResponse(_))
+    case JsonPost(PartialPath(path), _) => JString("defer to other nameserver: %s".format(path)) //FIXME
+  })
 }
