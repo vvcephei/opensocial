@@ -3,10 +3,10 @@ package org.vvcephei.opensocial.keyservice
 import net.liftweb.http.rest.RestHelper
 import net.liftweb.json.Extraction
 import org.vvcephei.opensocial.data.InMemoryContentKeyDAO
+import com.google.inject.{Singleton, Inject}
 
-object KeysApi extends RestHelper {
-  val contentKeyDAO = InMemoryContentKeyDAO
-
+@Singleton
+class KeysApi @Inject()(contentKeyDAO: InMemoryContentKeyDAO) extends RestHelper {
   serve("api" / "keys" / "users" prefix {
     case JsonGet(userId :: "content" :: Nil, req) => {
       val start = req.params.get("start") match {

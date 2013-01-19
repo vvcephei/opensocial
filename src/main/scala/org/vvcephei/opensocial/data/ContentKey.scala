@@ -5,6 +5,7 @@ import net.liftweb.json.{Extraction, Xml}
 import net.liftweb.json.JsonAST.JValue
 import net.liftweb.util.Helpers
 import org.vvcephei.opensocial.uns.data.DAO
+import com.google.inject.Singleton
 
 case class ContentKey(id: Option[String], key: Option[String], algorithm: Option[String], userId: Option[String])
 
@@ -67,14 +68,15 @@ object ContentKey {
 
 }
 
-trait ContentKeyDAO {
+trait ContentKeyDAO extends DAO[ContentKey] {
   def list(userId: String): Iterable[ContentKey]
 
   def list(userId: String, start: Int, limit: Int): Iterable[ContentKey] =
     list(userId).drop(start).take(limit)
 }
 
-object InMemoryContentKeyDAO extends DAO[ContentKey] with ContentKeyDAO {
+@Singleton
+class InMemoryContentKeyDAO extends ContentKeyDAO {
   val db: scala.collection.mutable.Map[String, ContentKey] =
     scala.collection.mutable.Map(List(
       ContentKey(Some("3F2504E0-4F89-11D3-9A0C-0305E82C3301"), Some("key"), Some("noop"), Some("john")),

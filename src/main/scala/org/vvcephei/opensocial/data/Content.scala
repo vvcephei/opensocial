@@ -7,6 +7,7 @@ import net.liftweb.util.Helpers
 import org.joda.time.{DateTimeZone, DateTime}
 import java.util.{UUID, Date}
 import org.vvcephei.opensocial.uns.data.DAO
+import com.google.inject.Singleton
 
 case class Content(id: Option[String], date: Option[Date], app: Option[String], data: Option[String])
 
@@ -69,7 +70,10 @@ object Content {
 
 }
 
-object InMemoryContentDAO extends DAO[Content] {
+trait ContentDAO extends DAO[Content]
+
+@Singleton
+class InMemoryContentDAO extends ContentDAO {
   val db: scala.collection.mutable.Map[String, Content] =
     scala.collection.mutable.Map(List(
       Content(Some("3F2504E0-4F89-11D3-9A0C-0305E82C3301"), Some(new DateTime(0, DateTimeZone.UTC).toDate), Some("myapp"), Some("mydata1")),

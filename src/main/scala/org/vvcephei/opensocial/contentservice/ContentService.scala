@@ -1,11 +1,12 @@
 package org.vvcephei.opensocial.contentservice
 
-import org.vvcephei.opensocial.data.{ContentKey, InMemoryContentKeyDAO, InMemoryContentDAO, Content}
+import org.vvcephei.opensocial.data._
 import org.vvcephei.opensocial.crypto.CryptoService
+import com.google.inject.Inject
+import scala.Some
 
-object ContentService {
-  val contentDAO = InMemoryContentDAO
-  val contentKeyDao = InMemoryContentKeyDAO
+class ContentService @Inject()(contentDAO: ContentDAO,
+                               contentKeyDAO: ContentKeyDAO) {
 
   def add(userId: String, content: Content) = {
     val cipherData = content.data.flatMap(clear => Some(CryptoService.encrypt(clear)))
@@ -14,7 +15,7 @@ object ContentService {
     resultContent match {
       case Some(Content(Some(id), _, _, _)) =>
         val resultKey =
-          contentKeyDao.add(ContentKey(
+          contentKeyDAO.add(ContentKey(
             id = Some(id),
             key = cipherData.flatMap(r => Some(r.key)),
             algorithm = cipherData.flatMap(r => Some(r.algorithm)),
