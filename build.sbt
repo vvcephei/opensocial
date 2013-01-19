@@ -12,5 +12,6 @@ resolvers ++= Seq("Java.net Maven2 Repository" at "http://download.java.net/mave
 libraryDependencies ++= Seq("net.liftweb" %% "lift-webkit" % "2.4" % "compile",
                         "org.mortbay.jetty" % "jetty" % "6.1.26" % "container",
                         "ch.qos.logback" % "logback-classic" % "0.9.26",
-                        "org.scalatest" %% "scalatest" % "1.8" % "test")
+                        "org.scalatest" %% "scalatest" % "1.8" % "test",
+                        "com.google.inject" % "guice" % "3.0")
 

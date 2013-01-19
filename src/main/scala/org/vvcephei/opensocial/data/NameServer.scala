@@ -3,6 +3,7 @@ package org.vvcephei.opensocial.uns.data
 import xml.Node
 import net.liftweb.json.{Extraction, Xml}
 import net.liftweb.json.JsonAST.JValue
+import com.google.inject.Singleton
 
 case class NameServer(id: Option[String], ip: Option[String])
 
@@ -13,7 +14,9 @@ object NameServer {
    * Convert an user to XML
    */
   implicit def toXml(nameServer: NameServer): Node =
-    <nameServer>{Xml.toXml(nameServer)}</nameServer>
+    <nameServer>
+      {Xml.toXml(nameServer)}
+    </nameServer>
 
 
   /**
@@ -38,22 +41,26 @@ object NameServer {
    * an NameServer can be returned easily from an XML REST call
    */
   implicit def toXml(nameServers: Seq[NameServer]): Node =
-    <nameServers>{
-      nameServers.map(toXml)
-      }</nameServers>
+    <nameServers>
+      {nameServers.map(toXml)}
+    </nameServers>
 
 
 }
 
 trait NameServerDAO {
-  def find(s:String): Option[NameServer]
+  def add(server: NameServer)
+
+  def find(s: String): Option[NameServer]
 }
 
-object InMemoryNameServerDAO extends NameServerDAO{
-  val db = List(
-    NameServer(Some("root"),Some("localhost:8080")),
-    NameServer(Some("bar"),Some("localhost:8080"))
-  ).map(n=>(n.id.getOrElse(""),n)).toMap
+@Singleton
+class InMemoryNameServerDAO extends NameServerDAO {
+  private val db = scala.collection.mutable.Map[String,NameServer]()
 
-  def find(s:String) = db.get(s)
+  def add(server: NameServer) {
+    server.id.map(id => db(id) = server)
+  }
+
+  def find(s: String) = db.get(s)
 }
