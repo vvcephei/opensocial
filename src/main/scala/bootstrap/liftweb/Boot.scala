@@ -11,7 +11,8 @@ import org.vvcephei.opensocial.uns.data.Name
 import org.vvcephei.opensocial.uns.data.FreesocialPersonData
 import org.vvcephei.opensocial.uns.UnsApi
 import scala.Some
-import org.vvcephei.opensocial.data.{ContentKey, InMemoryContentKeyDAO}
+import org.vvcephei.opensocial.data.{Content, InMemoryContentDAO, ContentKey, InMemoryContentKeyDAO}
+import org.joda.time.{DateTimeZone, DateTime}
 
 class Boot {
   def populatePeople(injector: Injector) {
@@ -30,11 +31,16 @@ class Boot {
     serverDAO.add(NameServer(Some("root"), Some("localhost:8080")))
   }
 
-  def populateContentKeys(injector: Injector) {
+  def populateContent(injector: Injector) {
+    val contentDAO = injector.getInstance(classOf[InMemoryContentDAO])
     val contentKeyDAO = injector.getInstance(classOf[InMemoryContentKeyDAO])
-    contentKeyDAO.add(ContentKey(Some("3F2504E0-4F89-11D3-9A0C-0305E82C3304"), Some("key"), Some("noop"), Some("john")))
-    contentKeyDAO.add(ContentKey(Some("3F2504E0-4F89-11D3-9A0C-0305E82C3305"), Some("key"), Some("noop"), Some("john")))
-    contentKeyDAO.add(ContentKey(Some("3F2504E0-4F89-11D3-9A0C-0305E82C3306"), Some("key"), Some("noop"), Some("john")))
+
+    val Some(Content(Some(id1),_,_,_)) = contentDAO.add(Content(None, Some(new DateTime(0, DateTimeZone.UTC).toDate), Some("myapp"), Some("mydata1")))
+    contentKeyDAO.add(ContentKey(Some(id1), Some("key"), Some("noop"), Some("john")))
+    val Some(Content(Some(id2),_,_,_)) = contentDAO.add(Content(None, Some(new DateTime(0, DateTimeZone.UTC).toDate), Some("myapp"), Some("mydata1")))
+    contentKeyDAO.add(ContentKey(Some(id2), Some("key"), Some("noop"), Some("john")))
+    val Some(Content(Some(id3),_,_,_)) = contentDAO.add(Content(None, Some(new DateTime(0, DateTimeZone.UTC).toDate), Some("myapp"), Some("mydata1")))
+    contentKeyDAO.add(ContentKey(Some(id3), Some("key"), Some("noop"), Some("john")))
   }
 
   def boot() {
@@ -42,7 +48,7 @@ class Boot {
     val injector = Guice.createInjector(new FreesocialModule(identity))
     populatePeople(injector)
     populateNameServers(injector)
-    populateContentKeys(injector)
+    populateContent(injector)
 
     LiftRules.statelessDispatchTable.append(Api)
     LiftRules.statelessDispatchTable.append(injector.getInstance(classOf[UnsApi]))

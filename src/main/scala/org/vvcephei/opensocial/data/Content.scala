@@ -8,6 +8,9 @@ import org.joda.time.{DateTimeZone, DateTime}
 import java.util.{UUID, Date}
 import org.vvcephei.opensocial.uns.data.DAO
 import com.google.inject.Singleton
+import spray.httpx.unmarshalling.Unmarshaller
+import spray.http.{HttpBody, MediaTypes}
+import spray.util._
 
 case class Content(id: Option[String], date: Option[Date], app: Option[String], data: Option[String])
 
@@ -67,6 +70,13 @@ object Content {
       {contents.map(toXml)}
     </contents>
 
+  /**
+   * Provide an implicit unmarshaller for spray
+   */
+  implicit val ContentUnmarshaller = Unmarshaller[Content](MediaTypes.`application/json`) {
+    case HttpBody(contentType, buffer) =>
+      apply(net.liftweb.json.parse(buffer.asString)).get
+  }
 
 }
 
@@ -74,12 +84,7 @@ trait ContentDAO extends DAO[Content]
 
 @Singleton
 class InMemoryContentDAO extends ContentDAO {
-  val db: scala.collection.mutable.Map[String, Content] =
-    scala.collection.mutable.Map(List(
-      Content(Some("3F2504E0-4F89-11D3-9A0C-0305E82C3301"), Some(new DateTime(0, DateTimeZone.UTC).toDate), Some("myapp"), Some("mydata1")),
-      Content(Some("3F2504E0-4F89-11D3-9A0C-0305E82C3302"), Some(new DateTime(0, DateTimeZone.UTC).toDate), Some("myapp"), Some("mydata2")),
-      Content(Some("3F2504E0-4F89-11D3-9A0C-0305E82C3303"), Some(new DateTime(0, DateTimeZone.UTC).toDate), Some("myapp"), Some("mydata3"))
-    ).map(u => (u.id.getOrElse(""), u)): _*)
+  val db = scala.collection.mutable.Map[String, Content]()
 
   def list() = db.values
 

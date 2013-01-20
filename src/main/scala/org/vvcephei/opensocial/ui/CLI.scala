@@ -5,7 +5,7 @@ import spray.io.IOExtension
 import spray.can.client.HttpClient
 import spray.client.HttpConduit
 import org.vvcephei.opensocial.uns.data.Person
-import org.vvcephei.opensocial.data.ContentKey
+import org.vvcephei.opensocial.data.{Content, ContentKey}
 import HttpConduit._
 
 
@@ -38,53 +38,30 @@ object Http {
 }
 
 object CLI {
-
-  def allKeys[U](hosts: List[String], path: String, onComplete: Either[Throwable, List[ContentKey]]) = hosts match {
-    case Nil =>
-    case h :: hs =>
-  }
-
-
   def main(args: Array[String]) {
     println("getting john's content")
 
-    Http.pipe[Person]("localhost:8080").apply(Get("/api/uns/users:/root/john.json"))
-      .onSuccess({
-      case person =>
-        println(person)
-        val kss = person.freesocialData.freesocial_keyServers.getOrElse(Nil)
-        for (ks <- kss) {
-          Http.pipe[List[ContentKey]](ks).apply(Get("/api/keys/users/john/content")).onFailure({
-            case error =>
-              println(error)
-              Http.system.shutdown()
-          }).onSuccess({
-            case contentKeys => println(contentKeys)
-          })
-        }
-      //        Http.system.shutdown()
-    }).onFailure({
-      case error =>
-        println(error)
-        Http.system.shutdown()
-    })
+    for {
+      person <- Http.pipe[Person]("localhost:8080").apply(Get("/api/uns/users:/root/john.json"))
+      keyservers <- person.freesocialData.freesocial_keyServers
+      keyserver <- keyservers
+      contentKeys <- Http.pipe[List[ContentKey]](keyserver).apply(Get("/api/keys/users/john/content"))
+      contentKey <- contentKeys
+      peers <- person.freesocialData.freesocial_peers
+      peer <- peers
+      id <- contentKey.id
+      content <- Http.pipe[Content](peer).apply(Get("/api/contents/" + id))
+    } {
+      println("unit: " + content)
+    }
 
-    /*    pipeline(HttpRequest(method = HttpMethods.GET, uri = targetPath)).onComplete {
-          case Right(response) =>
-            println("result:")
-            println(response.entity.asString)
-            pipeline2(HttpRequest(method = HttpMethods.GET, uri = targetPath)).onComplete {
-              case Right(response) =>
-                println("result2:")
-                println(response.entity.asString)
-                Http.system.shutdown()
-              case Left(error) =>
-                println(error)
-                Http.system.shutdown()
-            }
-          case Left(error) =>
-            println(error)
-            Http.system.shutdown()
-        }*/
+    val fres = for {
+      person <- Http.pipe[Person]("localhost:8080").apply(Get("/api/uns/users:/root/john.json"))
+    } yield {
+      person
+    }
+
+    fres.onComplete(r => println(r))
+
   }
 }
