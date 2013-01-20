@@ -7,6 +7,9 @@ import spray.client.HttpConduit
 import org.vvcephei.opensocial.uns.data.Person
 import org.vvcephei.opensocial.data.{Content, ContentKey}
 import HttpConduit._
+import akka.dispatch.{Await, Future}
+import akka.util.Duration
+import java.util.concurrent.TimeUnit
 
 
 object Http {
@@ -40,6 +43,7 @@ object Http {
 object CLI {
   def main(args: Array[String]) {
     println("getting john's content")
+    implicit val system = Http.system
 
     for {
       person <- Http.pipe[Person]("localhost:8080").apply(Get("/api/uns/users:/root/john.json"))
@@ -55,13 +59,33 @@ object CLI {
       println("unit: " + content)
     }
 
-    val fres = for {
-      person <- Http.pipe[Person]("localhost:8080").apply(Get("/api/uns/users:/root/john.json"))
-    } yield {
-      person
+    val r = Http.pipe[Person]("localhost:8080").apply(Get("/api/uns/users:/root/john.json")).flatMap(p => {
+      val kservs = p.freesocialData.freesocial_keyServers.getOrElse(Nil)
+      val peers = p.freesocialData.freesocial_peers.getOrElse(Nil)
+      val ckfuts = kservs.map(ks => Http.pipe[List[ContentKey]](ks).apply(Get("/api/keys/users/john/content")))
+      Future.sequence(ckfuts).map(loCks => (loCks, peers))
+    })
+
+    val r2 = r.flatMap {
+      case (loCks, peers) => {
+        val ids: List[String] = loCks.flatMap(cks => cks.map(_.id)).filter(_.isDefined).map(_.get)
+        val contents = ids.map(id => {
+          val attempts = peers.map(peer => Http.pipe[Content]("localhost:8080").apply(Get("/api/contents/" + id)))
+          Future.firstCompletedOf(attempts)
+        })
+        Future.sequence(contents)
+      }
     }
 
-    fres.onComplete(r => println(r))
-
+    r2.onFailure({
+      case _ => system.shutdown()
+    }).onSuccess({
+      case l =>
+        for (c <- l) {
+          println("nonblock: " + c)
+        }
+        system.shutdown()
+    })
+    
   }
 }
