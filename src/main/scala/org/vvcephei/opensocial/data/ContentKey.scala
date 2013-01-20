@@ -6,6 +6,9 @@ import net.liftweb.json.JsonAST.JValue
 import net.liftweb.util.Helpers
 import org.vvcephei.opensocial.uns.data.DAO
 import com.google.inject.Singleton
+import spray.httpx.unmarshalling.Unmarshaller
+import spray.http.{HttpBody, MediaTypes}
+import spray.util._
 
 case class ContentKey(id: Option[String], key: Option[String], algorithm: Option[String], userId: Option[String])
 
@@ -65,7 +68,21 @@ object ContentKey {
       {contentKeys.map(toXml)}
     </contentKeys>
 
+  /**
+   * Provide an implicit unmarshaller for spray
+   */
+  implicit val ContentKeyUnmarshaller = Unmarshaller[ContentKey](MediaTypes.`application/json`) {
+    case HttpBody(contentType, buffer) =>
+      apply(net.liftweb.json.parse(buffer.asString)).get
+  }
 
+  /**
+   * Provide an implicit unmarshaller for spray
+   */
+  implicit val ContentKeysUnmarshaller = Unmarshaller[List[ContentKey]](MediaTypes.`application/json`) {
+    case HttpBody(contentType, buffer) =>
+      net.liftweb.json.parse(buffer.asString).extract[List[ContentKey]]
+  }
 }
 
 trait ContentKeyDAO extends DAO[ContentKey] {
@@ -77,12 +94,7 @@ trait ContentKeyDAO extends DAO[ContentKey] {
 
 @Singleton
 class InMemoryContentKeyDAO extends ContentKeyDAO {
-  val db: scala.collection.mutable.Map[String, ContentKey] =
-    scala.collection.mutable.Map(List(
-      ContentKey(Some("3F2504E0-4F89-11D3-9A0C-0305E82C3301"), Some("key"), Some("noop"), Some("john")),
-      ContentKey(Some("3F2504E0-4F89-11D3-9A0C-0305E82C3302"), Some("key"), Some("noop"), Some("john2")),
-      ContentKey(Some("3F2504E0-4F89-11D3-9A0C-0305E82C3303"), Some("key"), Some("noop"), Some("john"))
-    ).map(u => (u.id.getOrElse(""), u)): _*)
+  val db = scala.collection.mutable.Map[String, ContentKey]()
 
   def list() = db.values
 

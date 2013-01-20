@@ -5,6 +5,9 @@ import net.liftweb.json.{Extraction, Xml}
 import net.liftweb.json.JsonAST.JValue
 import net.liftweb.util.Helpers
 import com.google.inject.Singleton
+import spray.httpx.unmarshalling.Unmarshaller
+import spray.http.{HttpBody, MediaTypes}
+import spray.util._
 
 case class Name(familyName: String,
                 formatted: String,
@@ -82,6 +85,15 @@ object Person {
     <users>
       {users.map(toXml)}
     </users>
+
+
+  /**
+   * Provide an implicit unmarshaller for spray
+   */
+  implicit val PersonUnmarshaller = Unmarshaller[Person](MediaTypes.`application/json`) {
+    case HttpBody(contentType, buffer) =>
+      apply(net.liftweb.json.parse(buffer.asString)).get
+  }
 }
 
 trait PersonDAO extends DAO[Person]
