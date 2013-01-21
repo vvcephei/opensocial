@@ -20,6 +20,42 @@ case class Name(familyName: Option[String],
   )
 }
 
+case class Account(domain: Option[String], username: Option[String], userId: Option[String])
+  extends Overridable[Account] {
+  def overriddenWith(other: Account) = Account(
+    newField(domain, other.domain),
+    newField(username, other.username),
+    newField(userId, other.userId)
+  )
+}
+
+case class Address(building: Option[String], country: Option[String], floor: Option[String],
+                   formatted: Option[String], latitude: Option[String], locality: Option[String],
+                   longitude: Option[String], postalCode: Option[String], region: Option[String],
+                   streetAddress: Option[String], `type`: Option[String])
+  extends Overridable[Address] {
+  def overridenWith(other: Address) = Address(
+    newField(building, other.building),
+    newField(country, other.country),
+    newField(floor, other.floor),
+    newField(formatted, other.formatted),
+    newField(latitude, other.latitude),
+    newField(locality, other.locality),
+    newField(longitude, other.longitude),
+    newField(postalCode, other.postalCode),
+    newField(region, other.region),
+    newField(streetAddress, other.streetAddress),
+    newField(`type`, other.`type`)
+  )
+}
+
+case class AppData(key: Option[String], value: Option[String]) extends Overridable[AppData] {
+  def overridenWith(other: AppData) = AppData(
+    newField(key, other.key),
+    newField(value, other.value)
+  )
+}
+
 case class FreesocialPersonData(freesocial_keyServers: Option[List[String]],
                                 freesocial_peers: Option[List[String]])
   extends Overridable[FreesocialPersonData] {
@@ -30,6 +66,11 @@ case class FreesocialPersonData(freesocial_keyServers: Option[List[String]],
 }
 
 case class Person(id: Option[String],
+                  account: Option[Account] = None,
+                  addresses: Option[List[Address]] = None,
+                  appData: Option[List[AppData]] = None,
+                  connected: Option[Boolean],
+conta
                   name: Option[Name],
                   displayName: Option[String],
                   freesocialData: Option[FreesocialPersonData])
@@ -37,6 +78,7 @@ case class Person(id: Option[String],
   with Overridable[Person] with RequirementsBearing with ModelObject[Person] {
   def overridenWith(other: Person) = Person(
     newField(id, other.id),
+    newFieldRec(account, other.account),
     newFieldRec(name, other.name),
     newField(displayName, other.displayName),
     newFieldRec(freesocialData, other.freesocialData)
