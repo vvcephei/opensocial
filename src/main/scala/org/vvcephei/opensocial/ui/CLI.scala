@@ -8,8 +8,7 @@ import org.vvcephei.opensocial.uns.data.Person
 import org.vvcephei.opensocial.data.{Content, ContentKey}
 import HttpConduit._
 import akka.dispatch.{Await, Future}
-import akka.util.Duration
-import java.util.concurrent.TimeUnit
+import akka.util.duration._
 
 
 object Http {
@@ -45,6 +44,7 @@ object CLI {
     println("getting john's content")
     implicit val system = Http.system
 
+    // Side-effect only (because the types are not correct for a monad)
     for {
       person <- Http.pipe[Person]("localhost:8080").apply(Get("/api/uns/users:/root/john.json"))
       keyservers <- person.freesocialData.freesocial_keyServers
@@ -59,6 +59,7 @@ object CLI {
       println("unit: " + content)
     }
 
+    // Monadic implementation, but a bit clunky:
     val r = Http.pipe[Person]("localhost:8080").apply(Get("/api/uns/users:/root/john.json")).flatMap(p => {
       val kservs = p.freesocialData.freesocial_keyServers.getOrElse(Nil)
       val peers = p.freesocialData.freesocial_peers.getOrElse(Nil)
@@ -84,8 +85,29 @@ object CLI {
         for (c <- l) {
           println("nonblock: " + c)
         }
-        system.shutdown()
     })
-    
+
+
+    // Best of both worlds: monadic implementation in a for comprehension
+    val monadRes = (for {
+      person <- Http.pipe[Person]("localhost:8080").apply(Get("/api/uns/users:/root/john.json"))
+      kservs = person.freesocialData.freesocial_keyServers.getOrElse(Nil)
+      peers = person.freesocialData.freesocial_peers.getOrElse(Nil)
+      loCks <- Future.sequence(kservs.map(ks => Http.pipe[List[ContentKey]](ks).apply(Get("/api/keys/users/john/content"))))
+      ids: List[String] = loCks.flatMap(cks => cks.map(_.id)).filter(_.isDefined).map(_.get)
+      contents = ids.map(id => {
+        val attempts = peers.map(peer => Http.pipe[Content]("localhost:8080").apply(Get("/api/contents/" + id)))
+        Future.firstCompletedOf(attempts)
+      })
+      content <- Future.sequence(contents)
+    } yield {
+      content
+    })
+
+
+    val result = Await.result(monadRes, 10 second)
+    result.foreach(c => println("monad: " + c))
+    system.shutdown()
+
   }
 }
