@@ -21,7 +21,7 @@ class Boot {
       "john",
       Name("Roesler", "John Roesler", "John"),
       Some("john"),
-      FreesocialPersonData(Some("localhost:8080"::Nil), Some("localhost:8080"::Nil))
+      FreesocialPersonData(Some("localhost:8080"::"localhost:8080"::Nil), Some("localhost:8080"::"localhost:8080"::Nil))
     ))
     println(personDAO.list())
   }
@@ -35,12 +35,12 @@ class Boot {
     val contentDAO = injector.getInstance(classOf[InMemoryContentDAO])
     val contentKeyDAO = injector.getInstance(classOf[InMemoryContentKeyDAO])
 
-    val Some(Content(Some(id1),_,_,_)) = contentDAO.add(Content(None, Some(new DateTime(0, DateTimeZone.UTC).toDate), Some("myapp"), Some("mydata1")))
-    contentKeyDAO.add(ContentKey(Some(id1), Some("key"), Some("noop"), Some("john")))
-    val Some(Content(Some(id2),_,_,_)) = contentDAO.add(Content(None, Some(new DateTime(0, DateTimeZone.UTC).toDate), Some("myapp"), Some("mydata1")))
-    contentKeyDAO.add(ContentKey(Some(id2), Some("key"), Some("noop"), Some("john")))
-    val Some(Content(Some(id3),_,_,_)) = contentDAO.add(Content(None, Some(new DateTime(0, DateTimeZone.UTC).toDate), Some("myapp"), Some("mydata1")))
-    contentKeyDAO.add(ContentKey(Some(id3), Some("key"), Some("noop"), Some("john")))
+    val Some(Content(Some(id1),date1,_,_)) = contentDAO.add(Content(None, Some(new DateTime(1000, DateTimeZone.UTC).toDate), Some("myapp"), Some("mydata1")))
+    contentKeyDAO.add(ContentKey(Some(id1), Some("key"), Some("noop"), Some("john"), date1))
+    val Some(Content(Some(id2),date2,_,_)) = contentDAO.add(Content(None, Some(new DateTime(0, DateTimeZone.UTC).toDate), Some("myapp"), Some("mydata1")))
+    contentKeyDAO.add(ContentKey(Some(id2), Some("key"), Some("noop"), Some("john"), date2))
+    val Some(Content(Some(id3),date3,_,_)) = contentDAO.add(Content(None, Some(new DateTime(2000, DateTimeZone.UTC).toDate), Some("myapp"), Some("mydata1")))
+    contentKeyDAO.add(ContentKey(Some(id3), Some("key"), Some("noop"), Some("john"), date3))
   }
 
   def boot() {

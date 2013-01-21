@@ -17,7 +17,16 @@ class KeysApi @Inject()(contentKeyDAO: InMemoryContentKeyDAO) extends RestHelper
         case Some(s :: _) => s.toInt
         case _ => 10
       }
-      Extraction.decompose(contentKeyDAO.list(userId, start, limit))
+      val sortBy = req.params.get("sortBy") match {
+        case Some("date" :: _) => "date"
+        case _ => "none"
+      }
+      val sortDir = req.params.get("sortDir") match {
+        case Some("asc" :: _) => "asc"
+        case Some("desc" :: _) => "desc"
+        case _ => "desc"
+      }
+      Extraction.decompose(contentKeyDAO.list(userId, start, limit, sortBy, sortDir))
     }
   })
 

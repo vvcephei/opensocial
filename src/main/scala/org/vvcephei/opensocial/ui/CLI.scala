@@ -9,6 +9,7 @@ import org.vvcephei.opensocial.data.{Content, ContentKey}
 import HttpConduit._
 import akka.dispatch.{Await, Future}
 import akka.util.duration._
+import org.vvcephei.opensocial.crypto.{EncryptResult, CryptoService}
 
 
 object Http {
@@ -40,74 +41,36 @@ object Http {
 }
 
 object CLI {
+  implicit val system = Http.system
+
   def main(args: Array[String]) {
     println("getting john's content")
-    implicit val system = Http.system
+    val (person, contents) = Await.result(personContent("john", 0, 3), 10 second)
+    println(person)
+    contents.foreach(c => println("monad: " + c))
+    system.shutdown()
+  }
 
-    // Side-effect only (because the types are not correct for a monad)
+  def personContent(personId: String, startIndex: Int = 0, limit: Int = Int.MaxValue): Future[(Person, List[Content])] =
     for {
-      person <- Http.pipe[Person]("localhost:8080").apply(Get("/api/uns/users:/root/john.json"))
-      keyservers <- person.freesocialData.freesocial_keyServers
-      keyserver <- keyservers
-      contentKeys <- Http.pipe[List[ContentKey]](keyserver).apply(Get("/api/keys/users/john/content"))
-      contentKey <- contentKeys
-      peers <- person.freesocialData.freesocial_peers
-      peer <- peers
-      id <- contentKey.id
-      content <- Http.pipe[Content](peer).apply(Get("/api/contents/" + id))
-    } {
-      println("unit: " + content)
-    }
-
-    // Monadic implementation, but a bit clunky:
-    val r = Http.pipe[Person]("localhost:8080").apply(Get("/api/uns/users:/root/john.json")).flatMap(p => {
-      val kservs = p.freesocialData.freesocial_keyServers.getOrElse(Nil)
-      val peers = p.freesocialData.freesocial_peers.getOrElse(Nil)
-      val ckfuts = kservs.map(ks => Http.pipe[List[ContentKey]](ks).apply(Get("/api/keys/users/john/content")))
-      Future.sequence(ckfuts).map(loCks => (loCks, peers))
-    })
-
-    val r2 = r.flatMap {
-      case (loCks, peers) => {
-        val ids: List[String] = loCks.flatMap(cks => cks.map(_.id)).filter(_.isDefined).map(_.get)
-        val contents = ids.map(id => {
-          val attempts = peers.map(peer => Http.pipe[Content]("localhost:8080").apply(Get("/api/contents/" + id)))
-          Future.firstCompletedOf(attempts)
-        })
-        Future.sequence(contents)
-      }
-    }
-
-    r2.onFailure({
-      case _ => system.shutdown()
-    }).onSuccess({
-      case l =>
-        for (c <- l) {
-          println("nonblock: " + c)
-        }
-    })
-
-
-    // Best of both worlds: monadic implementation in a for comprehension
-    val monadRes = (for {
-      person <- Http.pipe[Person]("localhost:8080").apply(Get("/api/uns/users:/root/john.json"))
-      kservs = person.freesocialData.freesocial_keyServers.getOrElse(Nil)
+      person <- Http.pipe[Person]("localhost:8080").apply(Get("/api/uns/users:/root/%s.json".format(personId)))
+      keyservers = person.freesocialData.freesocial_keyServers.getOrElse(Nil)
       peers = person.freesocialData.freesocial_peers.getOrElse(Nil)
-      loCks <- Future.sequence(kservs.map(ks => Http.pipe[List[ContentKey]](ks).apply(Get("/api/keys/users/john/content"))))
-      ids: List[String] = loCks.flatMap(cks => cks.map(_.id)).filter(_.isDefined).map(_.get)
-      contentFutures = ids.map(id => {
+      contentKeyses: List[List[ContentKey]] <- Future.sequence(keyservers.map(ks => Http.pipe[List[ContentKey]](ks).apply(Get("/api/keys/users/john/content?sortBy=date&sortDir=desc&start=%d&limit=%d".format(startIndex, limit)))))
+      contentKeys = contentKeyses.flatten.flatMap(ck => ck.id.map(id => (id, ck))).toMap
+      contentFutures = contentKeys.keys.toList.map(id => {
         val attempts = peers.map(peer => Http.pipe[Content]("localhost:8080").apply(Get("/api/contents/" + id)))
         Future.firstCompletedOf(attempts)
       })
-      contents <- Future.sequence(contentFutures)
+      cipherContents <- Future.sequence(contentFutures)
     } yield {
-      contents.map((person,_))
-    })
-
-
-    val result = Await.result(monadRes, 10 second)
-    result.foreach(c => println("monad: " + c))
-    system.shutdown()
-
-  }
+      (person, cipherContents.map {
+        case Content(Some(id), date, app, Some(data)) => contentKeys(id) match {
+          case ContentKey(_, Some(key), Some(algorithm), _, _) =>
+            Content(Some(id), date, app, Some(CryptoService.decrypt(EncryptResult(data, key, algorithm))))
+          case _ =>
+            Content(Some(id), date, app, None)
+        }
+      })
+    }
 }

@@ -9,8 +9,9 @@ import com.google.inject.Singleton
 import spray.httpx.unmarshalling.Unmarshaller
 import spray.http.{HttpBody, MediaTypes}
 import spray.util._
+import java.util.Date
 
-case class ContentKey(id: Option[String], key: Option[String], algorithm: Option[String], userId: Option[String])
+case class ContentKey(id: Option[String], key: Option[String], algorithm: Option[String], userId: Option[String], date: Option[Date])
 
 object ContentKey {
   private implicit val formats = net.liftweb.json.DefaultFormats
@@ -28,7 +29,7 @@ object ContentKey {
    */
   def unapply(in: Any) = {
     in match {
-      case i: ContentKey => Some((i.id, i.key, i.algorithm, i.userId))
+      case i: ContentKey => Some((i.id, i.key, i.algorithm, i.userId, i.date))
       case _ => None
     }
   }
@@ -88,8 +89,14 @@ object ContentKey {
 trait ContentKeyDAO extends DAO[ContentKey] {
   def list(userId: String): Iterable[ContentKey]
 
-  def list(userId: String, start: Int, limit: Int): Iterable[ContentKey] =
-    list(userId).drop(start).take(limit)
+  def list(userId: String, start: Int, limit: Int, sortBy: String, sortDir: String): Iterable[ContentKey] =
+    list(userId).toList.sortWith((lt, gt) =>
+      (sortBy, sortDir) match {
+        case ("date", "asc") => lt.date.isDefined && gt.date.isDefined && (lt.date.get before gt.date.get)
+        case ("date", "desc") => lt.date.isDefined && gt.date.isDefined && (lt.date.get after gt.date.get)
+        case _ => true
+      }
+    ).drop(start).take(limit)
 }
 
 @Singleton
@@ -124,12 +131,16 @@ class InMemoryContentKeyDAO extends ContentKeyDAO {
         case None => contentKey.userId
         case x => x
       }
+      val newDate = update.date match {
+        case None => contentKey.date
+        case x => x
+      }
       update.id match {
         case None =>
-          db(id) = ContentKey(Some(id), newKey, newAlgorithm, newUID)
+          db(id) = ContentKey(Some(id), newKey, newAlgorithm, newUID, newDate)
           db.get(id)
         case Some(updateId) =>
-          db(updateId) = ContentKey(Some(id), newKey, newAlgorithm, newUID)
+          db(updateId) = ContentKey(Some(id), newKey, newAlgorithm, newUID, newDate)
           db.remove(id)
           db.get(updateId)
       }
