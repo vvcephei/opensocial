@@ -95,13 +95,13 @@ object CLI {
       peers = person.freesocialData.freesocial_peers.getOrElse(Nil)
       loCks <- Future.sequence(kservs.map(ks => Http.pipe[List[ContentKey]](ks).apply(Get("/api/keys/users/john/content"))))
       ids: List[String] = loCks.flatMap(cks => cks.map(_.id)).filter(_.isDefined).map(_.get)
-      contents = ids.map(id => {
+      contentFutures = ids.map(id => {
         val attempts = peers.map(peer => Http.pipe[Content]("localhost:8080").apply(Get("/api/contents/" + id)))
         Future.firstCompletedOf(attempts)
       })
-      content <- Future.sequence(contents)
+      contents <- Future.sequence(contentFutures)
     } yield {
-      content
+      contents.map((person,_))
     })
 
 
