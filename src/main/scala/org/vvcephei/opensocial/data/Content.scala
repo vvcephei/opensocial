@@ -4,7 +4,6 @@ import xml.Node
 import net.liftweb.json.{Extraction, Xml}
 import net.liftweb.json.JsonAST.JValue
 import net.liftweb.util.Helpers
-import org.joda.time.{DateTimeZone, DateTime}
 import java.util.{UUID, Date}
 import org.vvcephei.opensocial.uns.data.DAO
 import com.google.inject.Singleton

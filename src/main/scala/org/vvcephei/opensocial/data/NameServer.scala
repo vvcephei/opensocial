@@ -56,7 +56,7 @@ trait NameServerDAO {
 
 @Singleton
 class InMemoryNameServerDAO extends NameServerDAO {
-  private val db = scala.collection.mutable.Map[String,NameServer]()
+  private val db = scala.collection.mutable.Map[String, NameServer]()
 
   def add(server: NameServer) {
     server.id.map(id => db(id) = server)
