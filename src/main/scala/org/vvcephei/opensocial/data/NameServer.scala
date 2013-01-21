@@ -4,63 +4,22 @@ import xml.Node
 import net.liftweb.json.{Extraction, Xml}
 import net.liftweb.json.JsonAST.JValue
 import com.google.inject.Singleton
+import org.vvcephei.opensocial.data.Util.newField
 
 case class NameServer(id: Option[String], ip: Option[String])
+  extends TupleBearing[(Option[String], Option[String])]
+  with Overridable[NameServer] with RequirementsBearing with ModelObject[NameServer] {
+  def overridenWith(other: NameServer) = NameServer(newField(id, other.id), newField(ip, other.ip))
 
-object NameServer {
-  private implicit val formats = net.liftweb.json.DefaultFormats
+  def withId(newId: Option[String]) = copy(id = newId)
 
-  /**
-   * Convert an user to XML
-   */
-  implicit def toXml(nameServer: NameServer): Node =
-    <nameServer>
-      {Xml.toXml(nameServer)}
-    </nameServer>
-
-
-  /**
-   * Convert the nameServer to JSON format. This is
-   * implicit and in the companion object, so
-   * an NameServer can be returned easily from a JSON call
-   */
-  implicit def toJson(nameServer: NameServer): JValue =
-    Extraction.decompose(nameServer)
-
-  /**
-   * Convert a Seq[NameServer] to JSON format. This is
-   * implicit and in the companion object, so
-   * an NameServer can be returned easily from a JSON call
-   */
-  implicit def toJson(nameServers: Seq[NameServer]): JValue =
-    Extraction.decompose(nameServers)
-
-  /**
-   * Convert a Seq[NameServer] to XML format. This is
-   * implicit and in the companion object, so
-   * an NameServer can be returned easily from an XML REST call
-   */
-  implicit def toXml(nameServers: Seq[NameServer]): Node =
-    <nameServers>
-      {nameServers.map(toXml)}
-    </nameServers>
-
-
+  val meetsRequirements = id.isDefined && ip.isDefined
+  val tuple = (id, ip)
 }
 
-trait NameServerDAO {
-  def add(server: NameServer)
+object NameServer extends OSCompanion[NameServer, (Option[String], Option[String])]("nameServer","nameServers")
 
-  def find(s: String): Option[NameServer]
-}
+trait NameServerDAO extends DAO[NameServer]
 
 @Singleton
-class InMemoryNameServerDAO extends NameServerDAO {
-  private val db = scala.collection.mutable.Map[String, NameServer]()
-
-  def add(server: NameServer) {
-    server.id.map(id => db(id) = server)
-  }
-
-  def find(s: String) = db.get(s)
-}
+class InMemoryNameServerDAO extends NameServerDAO with InMemoryDAO[NameServer]

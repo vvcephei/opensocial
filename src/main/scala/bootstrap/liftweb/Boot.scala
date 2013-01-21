@@ -18,10 +18,10 @@ class Boot {
   def populatePeople(injector: Injector) {
     val personDAO = injector.getInstance(classOf[InMemoryPersonDAO])
     personDAO.add(Person(
-      "john",
-      Name("Roesler", "John Roesler", "John"),
       Some("john"),
-      FreesocialPersonData(Some("localhost:8080"::"localhost:8080"::Nil), Some("localhost:8080"::"localhost:8080"::Nil))
+      Some(Name(Some("Roesler"), Some("John Roesler"), Some("John"))),
+      Some("john"),
+      Some(FreesocialPersonData(Some("localhost:8080"::"localhost:8080"::Nil), Some("localhost:8080"::"localhost:8080"::Nil)))
     ))
     println(personDAO.list())
   }

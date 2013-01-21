@@ -4,7 +4,7 @@ import akka.actor.{ActorRef, Props, ActorSystem}
 import spray.io.IOExtension
 import spray.can.client.HttpClient
 import spray.client.HttpConduit
-import org.vvcephei.opensocial.uns.data.Person
+import org.vvcephei.opensocial.uns.data.{FreesocialPersonData, Person}
 import org.vvcephei.opensocial.data.{Content, ContentKey}
 import HttpConduit._
 import akka.dispatch.{Await, Future}
@@ -54,8 +54,10 @@ object CLI {
   def personContent(personId: String, startIndex: Int = 0, limit: Int = Int.MaxValue): Future[(Person, List[Content])] =
     for {
       person <- Http.pipe[Person]("localhost:8080").apply(Get("/api/uns/users:/root/%s.json".format(personId)))
-      keyservers = person.freesocialData.freesocial_keyServers.getOrElse(Nil)
-      peers = person.freesocialData.freesocial_peers.getOrElse(Nil)
+      (keyservers,peers) = person.freesocialData match {
+        case None => (Nil,Nil)
+        case Some(FreesocialPersonData(ko,po)) => (ko.getOrElse(Nil), po.getOrElse(Nil))
+      }
       contentKeyses: List[List[ContentKey]] <- Future.sequence(keyservers.map(ks => Http.pipe[List[ContentKey]](ks).apply(Get("/api/keys/users/john/content?sortBy=date&sortDir=desc&start=%d&limit=%d".format(startIndex, limit)))))
       contentKeys = contentKeyses.flatten.flatMap(ck => ck.id.map(id => (id, ck))).toMap
       contentFutures = contentKeys.keys.toList.map(id => {

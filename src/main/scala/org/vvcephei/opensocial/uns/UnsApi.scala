@@ -67,7 +67,7 @@ case class UnsApi @Inject()(personDAO: PersonDAO,
     case JsonDelete(CompletedPath(path), _) => personDAO.remove(path.id).map(JsonResponse(_))
     case JsonDelete(PartialPath(path), _) => JString("defer to other nameserver: %s".format(path)) //FIXME
 
-    case JsonPut(CompletedPath(path), (Person(person), _)) => personDAO.add(person.copy(id = path.id)).map(JsonResponse(_))
+    case JsonPut(CompletedPath(path), (Person(person), _)) => personDAO.add(person.copy(id = Some(path.id))).map(JsonResponse(_))
     case JsonPut(PartialPath(path), _) => JString("defer to other nameserver: %s".format(path)) //FIXME
 
     case JsonPost(CompletedPath(path), (Person(person), _)) => personDAO.update(path.id, person).map(JsonResponse(_))

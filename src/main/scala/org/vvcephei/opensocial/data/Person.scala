@@ -1,145 +1,58 @@
 package org.vvcephei.opensocial.uns.data
 
-import xml.Node
-import net.liftweb.json.{Extraction, Xml}
-import net.liftweb.json.JsonAST.JValue
-import net.liftweb.util.Helpers
 import com.google.inject.Singleton
-import spray.httpx.unmarshalling.Unmarshaller
-import spray.http.{HttpBody, MediaTypes}
-import spray.util._
+import org.vvcephei.opensocial.data.Util._
 
-case class Name(familyName: String,
-                formatted: String,
-                givenName: String,
+case class Name(familyName: Option[String],
+                formatted: Option[String],
+                givenName: Option[String],
                 honorificPrefix: Option[String] = None,
                 honorificSuffix: Option[String] = None,
                 middleName: Option[String] = None)
-
-case class Person(id: String,
-                  name: Name,
-                  displayName: Option[String],
-                  freesocialData: FreesocialPersonData) {
-  require(id != null)
-  require(name != null)
-  require(displayName != null)
-  require(freesocialData != null)
+  extends Overridable[Name] {
+  def overridenWith(other: Name) = Name(
+    newField(familyName, other.familyName),
+    newField(formatted, other.formatted),
+    newField(givenName, other.givenName),
+    newField(honorificPrefix, other.honorificPrefix),
+    newField(honorificSuffix, other.honorificSuffix),
+    newField(middleName, other.middleName)
+  )
 }
-
 
 case class FreesocialPersonData(freesocial_keyServers: Option[List[String]],
                                 freesocial_peers: Option[List[String]])
-
-object Person {
-  private implicit val formats = net.liftweb.json.DefaultFormats
-
-  def apply(json: JValue) = Helpers.tryo {
-    json.extract[Person]
-  }
-
-  def unapply(json: JValue): Option[Person] = apply(json)
-
-  /**
-   * The default unapply method for the case class.
-   * We needed to replicate it here because we
-   * have overloaded unapply methods
-   */
-  def unapply(in: Any) = {
-    in match {
-      case i: Person => Some((i.id, i.name, i.displayName, i.freesocialData))
-      case _ => None
-    }
-  }
-
-  /**
-   * Convert an user to XML
-   */
-  implicit def toXml(user: Person): Node =
-    <user>
-      {Xml.toXml(user)}
-    </user>
-
-
-  /**
-   * Convert the user to JSON format. This is
-   * implicit and in the companion object, so
-   * an Person can be returned easily from a JSON call
-   */
-  implicit def toJson(user: Person): JValue =
-    Extraction.decompose(user)
-
-  /**
-   * Convert a Seq[Person] to JSON format. This is
-   * implicit and in the companion object, so
-   * an Person can be returned easily from a JSON call
-   */
-  implicit def toJson(users: Seq[Person]): JValue =
-    Extraction.decompose(users)
-
-  /**
-   * Convert a Seq[Person] to XML format. This is
-   * implicit and in the companion object, so
-   * an Person can be returned easily from an XML REST call
-   */
-  implicit def toXml(users: Seq[Person]): Node =
-    <users>
-      {users.map(toXml)}
-    </users>
-
-
-  /**
-   * Provide an implicit unmarshaller for spray
-   */
-  implicit val PersonUnmarshaller = Unmarshaller[Person](MediaTypes.`application/json`) {
-    case HttpBody(contentType, buffer) =>
-      apply(net.liftweb.json.parse(buffer.asString)).get
-  }
+  extends Overridable[FreesocialPersonData] {
+  def overridenWith(other: FreesocialPersonData) = FreesocialPersonData(
+    newField(freesocial_keyServers, other.freesocial_keyServers),
+    newField(freesocial_peers, other.freesocial_peers)
+  )
 }
+
+case class Person(id: Option[String],
+                  name: Option[Name],
+                  displayName: Option[String],
+                  freesocialData: Option[FreesocialPersonData])
+  extends TupleBearing[(Option[String], Option[Name], Option[String], Option[FreesocialPersonData])]
+  with Overridable[Person] with RequirementsBearing with ModelObject[Person] {
+  def overridenWith(other: Person) = Person(
+    newField(id, other.id),
+    newFieldRec(name, other.name),
+    newField(displayName, other.displayName),
+    newFieldRec(freesocialData, other.freesocialData)
+  )
+
+  def withId(newId: Option[String]) = copy(id = newId)
+
+  val meetsRequirements = id.isDefined && displayName.isDefined
+  val tuple = (id, name, displayName, freesocialData)
+}
+
+
+object Person extends OSCompanion[Person, (Option[String], Option[Name], Option[String], Option[FreesocialPersonData])]("person", "people")
 
 trait PersonDAO extends DAO[Person]
 
 @Singleton
-class InMemoryPersonDAO extends PersonDAO {
-  val db: scala.collection.mutable.Map[String, Person] = scala.collection.mutable.Map[String, Person]()
+class InMemoryPersonDAO extends PersonDAO with SettableIdInMemoryDAO[Person]
 
-  def list() = db.values
-
-  def find(s: String) = db.get(s)
-
-  def remove(s: String) = db.remove(s)
-
-  def add(user: Person) =
-    db.get(user.id) match {
-      case None =>
-        db(user.id) = user
-        find(user.id)
-      case _ => None
-    }
-
-
-  def update(id: String, update: Person) = db.get(id) match {
-    case None => None
-    case Some(user) => None
-    /*val newName = update.name match {
-      case None => user.name
-      case x => x
-    }
-    val newKS = update.keyServers match {
-      case None => user.keyServers
-      case x => x
-    }
-    val newPeers = update.peers match {
-      case None => user.peers
-      case x => x
-    }
-    update.id match {
-      case None =>
-        db(id) = Person(Some(id), newName, newKS, newPeers)
-        db.get(id)
-      case Some(updateId) =>
-        db(updateId) = Person(Some(id), newName, newKS, newPeers)
-        db.remove(id)
-        db.get(updateId)
-    }*/
-  }
-}
