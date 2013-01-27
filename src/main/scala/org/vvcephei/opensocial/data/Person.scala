@@ -2,6 +2,7 @@ package org.vvcephei.opensocial.uns.data
 
 import com.google.inject.Singleton
 import org.vvcephei.opensocial.data.Util._
+import java.util.Date
 
 case class Name(familyName: Option[String],
                 formatted: Option[String],
@@ -66,22 +67,39 @@ case class FreesocialPersonData(freesocial_keyServers: Option[List[String]],
 }
 
 case class Person(id: Option[String],
-                  account: Option[Account] = None,
-                  addresses: Option[List[Address]] = None,
-                  appData: Option[List[AppData]] = None,
-                  connected: Option[Boolean],
-conta
-                  name: Option[Name],
+                  //                  account: Option[Account] = None,
+                  //                  addresses: Option[List[Address]] = None,
+                  //                  appData: Option[List[AppData]] = None,
+                  //                  connected: Option[Boolean],
+                  //                  contactPreference: Option[String],
                   displayName: Option[String],
+                  emails: Option[List[String]],
+                  //                  location: Option[String],
+                  name: Option[Name],
+                  phoneNumbers: Option[List[String]],
+                  photos: Option[List[String]],
+                  //                  relationships: Option[List[String]],
+                  status: Option[String],
+                  //                  tags: Option[String],
+                  thumbnailUrl: Option[String],
+                  updated: Option[Date],
+                  urls: Option[List[String]],
                   freesocialData: Option[FreesocialPersonData])
-  extends TupleBearing[(Option[String], Option[Name], Option[String], Option[FreesocialPersonData])]
+  extends TupleBearing[(Option[String], Option[String], Option[List[String]], Option[Name], Option[List[String]],
+    Option[List[String]], Option[String], Option[String], Option[Date], Option[List[String]], Option[FreesocialPersonData])]
   with Overridable[Person] with RequirementsBearing with ModelObject[Person] {
   def overridenWith(other: Person) = Person(
     newField(id, other.id),
-    newFieldRec(account, other.account),
-    newFieldRec(name, other.name),
     newField(displayName, other.displayName),
-    newFieldRec(freesocialData, other.freesocialData)
+    newField(emails, other.emails),
+    newFieldRec(name, other.name),
+    newField(phoneNumbers, other.phoneNumbers),
+    newField(photos, other.photos),
+    newField(status, other.status),
+    newField(thumbnailUrl, other.thumbnailUrl),
+    newField(updated, other.updated),
+    newField(urls, other.urls),
+    newField(freesocialData, other.freesocialData)
   )
 
   def withId(newId: Option[String]) = copy(id = newId)
