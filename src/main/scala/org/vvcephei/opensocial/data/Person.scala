@@ -23,7 +23,7 @@ case class Name(familyName: Option[String],
 
 case class Account(domain: Option[String], username: Option[String], userId: Option[String])
   extends Overridable[Account] {
-  def overriddenWith(other: Account) = Account(
+  def overridenWith(other: Account) = Account(
     newField(domain, other.domain),
     newField(username, other.username),
     newField(userId, other.userId)
@@ -73,18 +73,18 @@ case class Person(id: Option[String],
                   //                  connected: Option[Boolean],
                   //                  contactPreference: Option[String],
                   displayName: Option[String],
-                  emails: Option[List[String]],
+                  emails: Option[List[String]] = None,
                   //                  location: Option[String],
-                  name: Option[Name],
-                  phoneNumbers: Option[List[String]],
-                  photos: Option[List[String]],
+                  name: Option[Name] = None,
+                  phoneNumbers: Option[List[String]] = None,
+                  photos: Option[List[String]] = None,
                   //                  relationships: Option[List[String]],
-                  status: Option[String],
+                  status: Option[String] = None,
                   //                  tags: Option[String],
-                  thumbnailUrl: Option[String],
-                  updated: Option[Date],
-                  urls: Option[List[String]],
-                  freesocialData: Option[FreesocialPersonData])
+                  thumbnailUrl: Option[String] = None,
+                  updated: Option[Date] = None,
+                  urls: Option[List[String]] = None,
+                  freesocialData: Option[FreesocialPersonData] = None)
   extends TupleBearing[(Option[String], Option[String], Option[List[String]], Option[Name], Option[List[String]],
     Option[List[String]], Option[String], Option[String], Option[Date], Option[List[String]], Option[FreesocialPersonData])]
   with Overridable[Person] with RequirementsBearing with ModelObject[Person] {
@@ -105,11 +105,12 @@ case class Person(id: Option[String],
   def withId(newId: Option[String]) = copy(id = newId)
 
   val meetsRequirements = id.isDefined && displayName.isDefined
-  val tuple = (id, name, displayName, freesocialData)
+  val tuple = (id, displayName, emails, name, phoneNumbers, photos, status, thumbnailUrl, updated, urls, freesocialData)
 }
 
 
-object Person extends OSCompanion[Person, (Option[String], Option[Name], Option[String], Option[FreesocialPersonData])]("person", "people")
+object Person extends OSCompanion[Person, (Option[String], Option[String], Option[List[String]], Option[Name], Option[List[String]],
+  Option[List[String]], Option[String], Option[String], Option[Date], Option[List[String]], Option[FreesocialPersonData])]("person", "people")
 
 trait PersonDAO extends DAO[Person]
 
