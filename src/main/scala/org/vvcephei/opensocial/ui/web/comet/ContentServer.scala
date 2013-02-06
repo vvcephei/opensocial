@@ -5,7 +5,6 @@ import http._
 import actor._
 import org.vvcephei.opensocial.ui.CLI
 import org.vvcephei.opensocial.data.Content
-import java.util.Date
 
 /**
  * A singleton that provides chat features to all clients.
@@ -13,8 +12,11 @@ import java.util.Date
  * message will be processed at once.
  */
 object ContentServer extends LiftActor with ListenerManager {
-  private var msgs: Vector[Content] = Vector(Content(Some("asdf"),Some(new Date()),Some("app"),Some("dataasdf"))) // private state
-  CLI.personContent("john").onSuccess({case (person, contents) => msgs = msgs ++ contents })
+  private var msgs: Vector[Content] = Vector()
+
+  CLI.personContent("john").onSuccess({
+    case (person, contents) => msgs = msgs ++ contents; updateListeners()
+  })
 
   /**
    * When we update the listeners, what message do we send?
@@ -31,6 +33,6 @@ object ContentServer extends LiftActor with ListenerManager {
    * messages, and then update all the listeners.
    */
   override def lowPriority = {
-    case s: String => /*msgs :+= s; */updateListeners()
+    case s: String => /*msgs :+= s; */ updateListeners()
   }
 }

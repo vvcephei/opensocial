@@ -34,5 +34,9 @@ class ContentListener extends CometActor with CometListener {
    * Put the messages in the li elements and clear
    * any elements that have the clearable class.
    */
-  def render = "li *" #> msgs.map(_.data.get) & ClearClearable
+  def render = "li" #> msgs.map(c=>
+    <li>
+    <div>{c.data.get}</div>
+    <div>{c.date.get}</div>
+  </li>) & ClearClearable
 }
