@@ -1,6 +1,6 @@
 package bootstrap.liftweb
 
-import net.liftweb.http.LiftRules
+import net.liftweb.http.{Req, Html5Properties, LiftRules}
 import org.vvcephei.opensocial.Api
 import org.vvcephei.opensocial.keyservice.KeysApi
 import org.vvcephei.opensocial.contentservice.ContentApi
@@ -71,6 +71,10 @@ class Boot {
 
     // Force the request to be UTF-8
     LiftRules.early.append(_.setCharacterEncoding("UTF-8"))
+
+    // Use HTML5 for rendering
+    LiftRules.htmlProperties.default.set((r: Req) =>
+      new Html5Properties(r.userAgent))
 
   }
 
