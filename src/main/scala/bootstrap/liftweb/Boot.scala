@@ -24,7 +24,15 @@ class Boot {
       id = Some("john"),
       displayName = Some("john"),
       name = Some(Name(Some("Roesler"), Some("John Roesler"), Some("John"))),
-      freesocialData = Some(FreesocialPersonData(Some("localhost:8080" :: "localhost:8080" :: Nil), Some("localhost:8080" :: "localhost:8080" :: Nil)))
+      freesocialData = Some(FreesocialPersonData(Some("localhost:8080" :: "localhost:8080" :: Nil), Some("localhost:8080" :: "localhost:8080" :: Nil))),
+      friends = Some("/root/fred" :: Nil)
+    ))
+    personDAO.add(Person(
+      id = Some("fred"),
+      displayName = Some("fred"),
+      name = Some(Name(Some("Basdf"), Some("Fred Basdf"), Some("Fred"))),
+      freesocialData = Some(FreesocialPersonData(Some("localhost:8080" :: "localhost:8080" :: Nil), Some("localhost:8080" :: "localhost:8080" :: Nil))),
+      friends = Some("/root/john" :: Nil)
     ))
     println(personDAO.list())
   }
@@ -38,12 +46,28 @@ class Boot {
     val contentDAO = injector.getInstance(classOf[InMemoryContentDAO])
     val contentKeyDAO = injector.getInstance(classOf[InMemoryContentKeyDAO])
 
-    val Some(Content(Some(id1), date1, _, _)) = contentDAO.add(Content(None, Some(new DateTime(1000, DateTimeZone.UTC).toDate), Some("myapp"), Some("mydata1")))
-    contentKeyDAO.add(ContentKey(Some(id1), Some("key"), Some("noop"), Some("john"), date1))
-    val Some(Content(Some(id2), date2, _, _)) = contentDAO.add(Content(None, Some(new DateTime(0, DateTimeZone.UTC).toDate), Some("myapp"), Some("mydata1")))
-    contentKeyDAO.add(ContentKey(Some(id2), Some("key"), Some("noop"), Some("john"), date2))
-    val Some(Content(Some(id3), date3, _, _)) = contentDAO.add(Content(None, Some(new DateTime(2000, DateTimeZone.UTC).toDate), Some("myapp"), Some("mydata1")))
-    contentKeyDAO.add(ContentKey(Some(id3), Some("key"), Some("noop"), Some("john"), date3))
+    {
+      val Some(Content(Some(id1), date1, _, _)) =
+        contentDAO.add(Content(None, Some(new DateTime(1000, DateTimeZone.UTC).toDate), Some("myapp"), Some("fredDatat1")))
+      contentKeyDAO.add(ContentKey(Some(id1), Some("key"), Some("noop"), Some("fred"), date1))
+    }
+    {
+      val Some(Content(Some(id1), date1, _, _)) =
+        contentDAO.add(Content(None, Some(new DateTime(1000, DateTimeZone.UTC).toDate), Some("myapp"), Some("Fred's content 2")))
+      contentKeyDAO.add(ContentKey(Some(id1), Some("key"), Some("noop"), Some("fred"), date1))
+    }
+    {
+      val Some(Content(Some(id1), date1, _, _)) = contentDAO.add(Content(None, Some(new DateTime(1000, DateTimeZone.UTC).toDate), Some("myapp"), Some("mydata1")))
+      contentKeyDAO.add(ContentKey(Some(id1), Some("key"), Some("noop"), Some("john"), date1))
+    }
+    {
+      val Some(Content(Some(id2), date2, _, _)) = contentDAO.add(Content(None, Some(new DateTime(0, DateTimeZone.UTC).toDate), Some("myapp"), Some("mydata1")))
+      contentKeyDAO.add(ContentKey(Some(id2), Some("key"), Some("noop"), Some("john"), date2))
+    }
+    {
+      val Some(Content(Some(id3), date3, _, _)) = contentDAO.add(Content(None, Some(new DateTime(2000, DateTimeZone.UTC).toDate), Some("myapp"), Some("mydata1")))
+      contentKeyDAO.add(ContentKey(Some(id3), Some("key"), Some("noop"), Some("john"), date3))
+    }
   }
 
   def setupWebUI() {
@@ -74,8 +98,8 @@ class Boot {
     LiftRules.early.append(_.setCharacterEncoding("UTF-8"))
 
     // Use HTML5 for rendering
-    LiftRules.htmlProperties.default.set((r: Req) =>
-      new Html5Properties(r.userAgent))
+    //    LiftRules.htmlProperties.default.set((r: Req) =>
+    //      new Html5Properties(r.userAgent))
 
   }
 

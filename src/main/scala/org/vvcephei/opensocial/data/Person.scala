@@ -84,9 +84,11 @@ case class Person(id: Option[String],
                   thumbnailUrl: Option[String] = None,
                   updated: Option[Date] = None,
                   urls: Option[List[String]] = None,
-                  freesocialData: Option[FreesocialPersonData] = None)
+                  freesocialData: Option[FreesocialPersonData] = None,
+                  friends: Option[List[String]] = None)
   extends TupleBearing[(Option[String], Option[String], Option[List[String]], Option[Name], Option[List[String]],
-    Option[List[String]], Option[String], Option[String], Option[Date], Option[List[String]], Option[FreesocialPersonData])]
+    Option[List[String]], Option[String], Option[String], Option[Date], Option[List[String]], Option[FreesocialPersonData],
+    Option[List[String]])]
   with Overridable[Person] with RequirementsBearing with ModelObject[Person] {
   def overridenWith(other: Person) = Person(
     newField(id, other.id),
@@ -99,18 +101,21 @@ case class Person(id: Option[String],
     newField(thumbnailUrl, other.thumbnailUrl),
     newField(updated, other.updated),
     newField(urls, other.urls),
-    newField(freesocialData, other.freesocialData)
+    newField(freesocialData, other.freesocialData),
+    newField(friends, other.friends)
   )
 
   def withId(newId: Option[String]) = copy(id = newId)
 
   val meetsRequirements = id.isDefined && displayName.isDefined
-  val tuple = (id, displayName, emails, name, phoneNumbers, photos, status, thumbnailUrl, updated, urls, freesocialData)
+  val tuple = (id, displayName, emails, name, phoneNumbers, photos, status, thumbnailUrl, updated, urls, freesocialData,
+    friends)
 }
 
 
 object Person extends OSCompanion[Person, (Option[String], Option[String], Option[List[String]], Option[Name], Option[List[String]],
-  Option[List[String]], Option[String], Option[String], Option[Date], Option[List[String]], Option[FreesocialPersonData])]("person", "people")
+  Option[List[String]], Option[String], Option[String], Option[Date], Option[List[String]], Option[FreesocialPersonData],
+  Option[List[String]])]("person", "people")
 
 trait PersonDAO extends DAO[Person]
 

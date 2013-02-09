@@ -40,30 +40,77 @@ object Http {
   }
 }
 
+object Client {
+  implicit val system = Http.system
+
+  def getPerson(personPath: String): Future[Person] = Http.pipe[Person]("localhost:8080").apply(Get("/api/uns/users:%s.json".format(personPath)))
+
+  def getContentKeys(keyservers: List[String], personId: String, startIndex: Int, limit: Int): Future[List[ContentKey]] = {
+    Future.sequence(keyservers.map(ks => getContentKeys(ks, personId, startIndex, limit))).map(_.flatten)
+  }
+
+  def getContentKeys(ks: String, personId: String, startIndex: Int, limit: Int): Future[List[ContentKey]] = {
+    Http.pipe[List[ContentKey]](ks)
+      .apply(Get("/api/keys/users/%s/content?sortBy=date&sortDir=desc&start=%d&limit=%d"
+      .format(personId, startIndex, limit)))
+  }
+
+  def getContent(peers: List[String], id: String): Future[Content] =
+    Future.firstCompletedOf(peers.map(peer => Http.pipe[Content]("localhost:8080").apply(Get("/api/contents/" + id))))
+
+}
+
 object CLI {
+
+  import Client._
+
   implicit val system = Http.system
 
   def main(args: Array[String]) {
     println("getting john's content")
-    val (person, contents) = Await.result(personContent("john", 0, 3), 10 second)
+    val (person, contents) = Await.result(personContent("/root/fred", 0, 3), 10 second)
     println(person)
     contents.foreach(c => println("monad: " + c))
+
+    val future_updates = Await.result(friendContent("/root/john"), 10 second)
+    for {
+      friend <- future_updates
+      update <- Await.result(friend, 10 second)
+    } {
+      println(update._1.id.get)
+      println(update._2)
+    }
     system.shutdown()
   }
 
-  def personContent(personId: String, startIndex: Int = 0, limit: Int = Int.MaxValue): Future[(Person, List[Content])] =
+  def friendContent(personPath: String, startIndex: Int = 0, limit: Int = Int.MaxValue)
+  : Future[List[Future[List[(Person, Content)]]]] =
     for {
-      person <- Http.pipe[Person]("localhost:8080").apply(Get("/api/uns/users:/root/%s.json".format(personId)))
-      (keyservers,peers) = person.freesocialData match {
-        case None => (Nil,Nil)
-        case Some(FreesocialPersonData(ko,po)) => (ko.getOrElse(Nil), po.getOrElse(Nil))
+      person <- getPerson(personPath)
+    } yield {
+      for {
+        friend <- (personPath :: person.friends.getOrElse(Nil))
+      } yield {
+        val friendPerson = getPerson(friend)
+        for {
+          future_friend <- friendPerson
+          (_, future_updates) <- personContent(friend, startIndex, limit)
+        } yield {
+          future_updates.map(content => (future_friend, content))
+        }
       }
-      contentKeyses: List[List[ContentKey]] <- Future.sequence(keyservers.map(ks => Http.pipe[List[ContentKey]](ks).apply(Get("/api/keys/users/john/content?sortBy=date&sortDir=desc&start=%d&limit=%d".format(startIndex, limit)))))
-      contentKeys = contentKeyses.flatten.flatMap(ck => ck.id.map(id => (id, ck))).toMap
-      contentFutures = contentKeys.keys.toList.map(id => {
-        val attempts = peers.map(peer => Http.pipe[Content]("localhost:8080").apply(Get("/api/contents/" + id)))
-        Future.firstCompletedOf(attempts)
-      })
+    }
+
+  def personContent(personPath: String, startIndex: Int = 0, limit: Int = Int.MaxValue): Future[(Person, List[Content])] =
+    for {
+      person <- getPerson(personPath)
+      (keyservers, peers) = person.freesocialData match {
+        case None => (Nil, Nil)
+        case Some(FreesocialPersonData(ko, po)) => (ko.getOrElse(Nil), po.getOrElse(Nil))
+      }
+      contentKeyses: List[ContentKey] <- getContentKeys(keyservers, person.id.get, startIndex, limit)
+      contentKeys = contentKeyses.flatMap(ck => ck.id.map(id => (id, ck))).toMap
+      contentFutures = contentKeys.keys.toList.map(id => getContent(peers, id))
       cipherContents <- Future.sequence(contentFutures)
     } yield {
       (person, cipherContents.map {
@@ -75,4 +122,6 @@ object CLI {
         }
       })
     }
+
+
 }
