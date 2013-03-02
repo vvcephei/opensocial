@@ -3,7 +3,7 @@ package org.vvcephei.opensocial.ui.web.comet
 import net.liftweb._
 import http._
 import actor._
-import org.vvcephei.opensocial.ui.CLI
+import org.vvcephei.opensocial.ui.{FreesocialClient, CLI}
 import org.vvcephei.opensocial.data.Content
 
 /**
@@ -14,7 +14,7 @@ import org.vvcephei.opensocial.data.Content
 object ContentServer extends LiftActor with ListenerManager {
   private var msgs: Vector[Content] = Vector()
 
-  CLI.personContent("john").onSuccess({
+  FreesocialClient.personContent("john").onSuccess({
     case (person, contents) => msgs = msgs ++ contents; updateListeners()
   })
 
