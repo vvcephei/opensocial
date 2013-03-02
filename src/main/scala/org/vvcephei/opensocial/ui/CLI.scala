@@ -40,7 +40,7 @@ object Http {
   }
 }
 
-object Client {
+object FreesocialClient {
   implicit val system = Http.system
 
   def getPerson(personPath: String): Future[Person] = Http.pipe[Person]("localhost:8080").apply(Get("/api/uns/users:%s.json".format(personPath)))
@@ -58,30 +58,6 @@ object Client {
   def getContent(peers: List[String], id: String): Future[Content] =
     Future.firstCompletedOf(peers.map(peer => Http.pipe[Content]("localhost:8080").apply(Get("/api/contents/" + id))))
 
-}
-
-object CLI {
-
-  import Client._
-
-  implicit val system = Http.system
-
-  def main(args: Array[String]) {
-    println("getting john's content")
-    val (person, contents) = Await.result(personContent("/root/fred", 0, 3), 10 second)
-    println(person)
-    contents.foreach(c => println("monad: " + c))
-
-    val future_updates = Await.result(friendContent("/root/john"), 10 second)
-    for {
-      friend <- future_updates
-      update <- Await.result(friend, 10 second)
-    } {
-      println(update._1.id.get)
-      println(update._2)
-    }
-    system.shutdown()
-  }
 
   def friendContent(personPath: String, startIndex: Int = 0, limit: Int = Int.MaxValue)
   : Future[List[Future[List[(Person, Content)]]]] =
@@ -122,6 +98,31 @@ object CLI {
         }
       })
     }
+}
+
+object CLI {
+
+  import FreesocialClient._
+
+  implicit val system = Http.system
+
+  def main(args: Array[String]) {
+    println("getting john's content")
+    val (person, contents) = Await.result(personContent("/root/fred", 0, 3), 10 second)
+    println(person)
+    contents.foreach(c => println("monad: " + c))
+
+    val future_updates = Await.result(friendContent("/root/john"), 10 second)
+    for {
+      friend <- future_updates
+      update <- Await.result(friend, 10 second)
+    } {
+      println(update._1.id.get)
+      println(update._2)
+    }
+    system.shutdown()
+  }
+
 
 
 }
