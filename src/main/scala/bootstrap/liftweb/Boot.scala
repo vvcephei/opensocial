@@ -1,21 +1,21 @@
 package bootstrap.liftweb
 
-import net.liftweb.http.{Req, Html5Properties, LiftRules}
+import net.liftweb.http.LiftRules
 import org.vvcephei.opensocial.Api
 import org.vvcephei.opensocial.keyservice.KeysApi
 import org.vvcephei.opensocial.contentservice.ContentApi
 import com.google.inject.{Injector, Guice}
 import org.vvcephei.opensocial.injection.FreesocialModule
 import org.vvcephei.opensocial.uns.data._
-import org.vvcephei.opensocial.uns.data.Name
-import org.vvcephei.opensocial.uns.data.FreesocialPersonData
-import org.vvcephei.opensocial.uns.UnsApi
-import scala.Some
-import org.vvcephei.opensocial.data.{Content, InMemoryContentDAO, ContentKey, InMemoryContentKeyDAO}
+import org.vvcephei.opensocial.data._
 import org.joda.time.{DateTimeZone, DateTime}
-import net.liftweb.common.Full
 import net.liftweb.sitemap.{Menu, Loc, SiteMap}
 import net.liftweb.sitemap.Loc.Link
+import org.vvcephei.opensocial.uns.UnsApi
+import net.liftweb.common.Full
+import scala.Some
+import org.vvcephei.opensocial.uns.data.Name
+import org.vvcephei.opensocial.uns.data.FreesocialPersonData
 
 class Boot {
   def populatePeople(injector: Injector) {
@@ -42,32 +42,57 @@ class Boot {
     serverDAO.add(NameServer(Some("root"), Some("localhost:8080")))
   }
 
+  val dateGen = {
+    var date = new DateTime(0, DateTimeZone.UTC)
+    () => {
+      date = date.plusMinutes(1)
+      date.toDate
+    }
+  }
+
   def populateContent(injector: Injector) {
     val contentDAO = injector.getInstance(classOf[InMemoryContentDAO])
     val contentKeyDAO = injector.getInstance(classOf[InMemoryContentKeyDAO])
 
     {
       val Some(Content(Some(id1), date1, _, _)) =
-        contentDAO.add(Content(None, Some(new DateTime(1000, DateTimeZone.UTC).toDate), Some("myapp"), Some("fredDatat1")))
+        contentDAO.add(Content(None, Some(dateGen()), Some("myapp"), Some("fredDatat1")))
       contentKeyDAO.add(ContentKey(Some(id1), Some("key"), Some("noop"), Some("fred"), date1))
     }
     {
       val Some(Content(Some(id1), date1, _, _)) =
-        contentDAO.add(Content(None, Some(new DateTime(1000, DateTimeZone.UTC).toDate), Some("myapp"), Some("Fred's content 2")))
+        contentDAO.add(Content(None, Some(dateGen()), Some("myapp"), Some("Fred's content 2")))
       contentKeyDAO.add(ContentKey(Some(id1), Some("key"), Some("noop"), Some("fred"), date1))
     }
-    {
-      val Some(Content(Some(id1), date1, _, _)) = contentDAO.add(Content(None, Some(new DateTime(1000, DateTimeZone.UTC).toDate), Some("myapp"), Some("mydata1")))
-      contentKeyDAO.add(ContentKey(Some(id1), Some("key"), Some("noop"), Some("john"), date1))
+    def doJohn() = {
+      {
+        val post = TextPost("A quick post", "Donec ac leo eget est posuere ultricies. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus." :: Nil)
+        val Some(Content(Some(id1), date1, _, _)) = contentDAO.add(Content(None, Some(dateGen()), Some(TextPost.registryKey), Some(TextPost.toJsonString(post))))
+        contentKeyDAO.add(ContentKey(Some(id1), Some("key"), Some("noop"), Some("john"), date1))
+      }
+      {
+        val body = """Ut vulputate felis nec lorem tempus suscipit. Vestibulum nec augue sit amet dui euismod posuere ut fermentum dui. Mauris arcu neque, blandit sit amet vulputate vehicula, feugiat non lectus. Sed placerat facilisis fringilla. Nullam ac est massa. Etiam suscipit arcu ac risus gravida vulputate. Integer dictum pharetra erat, non scelerisque velit interdum sit amet. Etiam sed leo aliquam tortor vehicula dictum. Nunc convallis tempor libero, vitae viverra orci vulputate eget. Ut molestie pretium purus, non dignissim massa ullamcorper sed. Proin ultrices faucibus metus id ultrices. Duis gravida mi condimentum sem auctor a egestas lectus ultrices. Nam tortor ante, elementum non hendrerit quis, elementum eu tortor.""" ::
+          """Donec ac leo eget est posuere ultricies. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Suspendisse potenti. Donec cursus lacus et nisi luctus porta. Morbi mattis, est eu laoreet dignissim, tellus velit volutpat massa, non tempor orci ipsum in erat. Nunc vehicula consequat nisi, eu sagittis turpis gravida id. Ut ac mattis eros. Donec id purus quis orci aliquet laoreet at a dolor.""" ::
+          """Curabitur gravida, metus id varius viverra, augue tellus gravida lacus, a commodo lectus sapien et nisi. Morbi lorem risus, fermentum nec pretium eget, rhoncus vel lacus. Pellentesque metus diam, volutpat id hendrerit id, accumsan id turpis. In id nibh elit. Ut faucibus augue in urna bibendum nec malesuada lorem egestas. Proin sit amet nibh ut ligula imperdiet semper. Proin mattis, odio vitae eleifend pellentesque, diam libero porta mi, vitae condimentum neque nisi id metus. Maecenas in pulvinar tortor. Vestibulum elementum lorem at orci hendrerit tincidunt eget ut nisi.""" ::
+          Nil
+        val post = TextPost("A longer post", body)
+        val Some(Content(Some(id2), date2, _, _)) = contentDAO.add(Content(None, Some(dateGen()), Some(TextPost.registryKey), Some(TextPost.toJsonString(post))))
+        contentKeyDAO.add(ContentKey(Some(id2), Some("key"), Some("noop"), Some("john"), date2))
+      }
+      {
+        val body = """Donec ac leo eget est posuere ultricies. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Suspendisse potenti. Donec cursus lacus et nisi luctus porta. Morbi mattis, est eu laoreet dignissim, tellus velit volutpat massa, non tempor orci ipsum in erat. Nunc vehicula consequat nisi, eu sagittis turpis gravida id. Ut ac mattis eros. Donec id purus quis orci aliquet laoreet at a dolor.""" ::
+          Nil
+        val post = TextPost("A medium post", body)
+        val Some(Content(Some(id2), date2, _, _)) = contentDAO.add(Content(None, Some(dateGen()), Some(TextPost.registryKey), Some(TextPost.toJsonString(post))))
+        contentKeyDAO.add(ContentKey(Some(id2), Some("key"), Some("noop"), Some("john"), date2))
+      }
+      {
+        val Some(Content(Some(id3), date3, _, _)) = contentDAO.add(Content(None, Some(dateGen()), Some("myapp"), Some("mydata1")))
+        contentKeyDAO.add(ContentKey(Some(id3), Some("key"), Some("noop"), Some("john"), date3))
+      }
     }
-    {
-      val Some(Content(Some(id2), date2, _, _)) = contentDAO.add(Content(None, Some(new DateTime(0, DateTimeZone.UTC).toDate), Some("myapp"), Some("mydata1")))
-      contentKeyDAO.add(ContentKey(Some(id2), Some("key"), Some("noop"), Some("john"), date2))
-    }
-    {
-      val Some(Content(Some(id3), date3, _, _)) = contentDAO.add(Content(None, Some(new DateTime(2000, DateTimeZone.UTC).toDate), Some("myapp"), Some("mydata1")))
-      contentKeyDAO.add(ContentKey(Some(id3), Some("key"), Some("noop"), Some("john"), date3))
-    }
+    doJohn()
+    doJohn()
   }
 
   def setupWebUI() {

@@ -46,7 +46,7 @@ object FreesocialClient {
   def getPerson(personPath: String): Future[Person] = Http.pipe[Person]("localhost:8080").apply(Get("/api/uns/users:%s.json".format(personPath)))
 
   def getContentKeys(keyservers: List[String], personId: String, startIndex: Int, limit: Int): Future[List[ContentKey]] = {
-    Future.sequence(keyservers.map(ks => getContentKeys(ks, personId, startIndex, limit))).map(_.flatten)
+    Future.sequence(keyservers.map(ks => getContentKeys(ks, personId, startIndex, limit))).map(_.flatten.toSet.toList.sortBy((_: ContentKey).date).reverse)
   }
 
   def getContentKeys(ks: String, personId: String, startIndex: Int, limit: Int): Future[List[ContentKey]] = {
@@ -77,27 +77,32 @@ object FreesocialClient {
       }
     }
 
-  def personContent(personPath: String, startIndex: Int = 0, limit: Int = Int.MaxValue): Future[(Person, List[Content])] =
+  def personContent(personPath: String, startIndex: Int = 0, limit: Int = Int.MaxValue): Future[(Person, List[Content])] = {
     for {
       person <- getPerson(personPath)
       (keyservers, peers) = person.freesocialData match {
         case None => (Nil, Nil)
         case Some(FreesocialPersonData(ko, po)) => (ko.getOrElse(Nil), po.getOrElse(Nil))
       }
-      contentKeyses: List[ContentKey] <- getContentKeys(keyservers, person.id.get, startIndex, limit)
-      contentKeys = contentKeyses.flatMap(ck => ck.id.map(id => (id, ck))).toMap
-      contentFutures = contentKeys.keys.toList.map(id => getContent(peers, id))
+      contentKeys: List[ContentKey] <- getContentKeys(keyservers, person.id.get, startIndex, limit)
+      ids = contentKeys.flatMap(_.id.map(s => s))
+      //      contentKeys = contentKeyses.flatMap(ck => ck.id.map(id => (id, ck))).toMap
+      contentFutures = ids.map(id => getContent(peers, id).map(c => id -> c))
       cipherContents <- Future.sequence(contentFutures)
     } yield {
-      (person, cipherContents.map {
-        case Content(Some(id), date, app, Some(data)) => contentKeys(id) match {
-          case ContentKey(_, Some(key), Some(algorithm), _, _) =>
-            Content(Some(id), date, app, Some(CryptoService.decrypt(EncryptResult(data, key, algorithm))))
-          case _ =>
-            Content(Some(id), date, app, None)
+      val ciphers = cipherContents.toMap
+      (person, for {
+        k <- contentKeys
+        if k.id.isDefined && ciphers.contains(k.id.get)
+      } yield {
+        (k, ciphers(k.id.get)) match {
+          case (ContentKey(id, Some(key), Some(algorithm), _, _), Content(_, date, app, Some(cipherText))) =>
+            Content(id, date, app, Some(CryptoService.decrypt(EncryptResult(cipherText, key, algorithm))))
+          case (_, c) => c
         }
       })
     }
+  }
 }
 
 object CLI {
@@ -122,7 +127,6 @@ object CLI {
     }
     system.shutdown()
   }
-
 
 
 }

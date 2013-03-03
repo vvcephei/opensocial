@@ -4,6 +4,22 @@ import java.util.Date
 import org.vvcephei.opensocial.uns.data._
 import com.google.inject.Singleton
 import Util.newField
+import net.liftweb.json.Extraction
+
+case class TextPost(title: String, body: List[String]) extends TupleBearing[(String, List[String])] {
+  val tuple = (title,body)
+}
+
+object TextPost extends OSCompanion[TextPost, (String, List[String])]("textPost", "textPosts") {
+  def registryKey = "textPost"
+}
+
+object AppRegistry {
+  def extractor = Map(
+    ("myapp", (s: String) => s),
+    (TextPost.registryKey, (s: String) => TextPost.fromJsonString(s))
+  )
+}
 
 case class Content(id: Option[String], date: Option[Date], app: Option[String], data: Option[String])
   extends TupleBearing[(Option[String], Option[Date], Option[String], Option[String])]

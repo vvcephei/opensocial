@@ -8,7 +8,7 @@ import spray.http.{HttpBody, MediaTypes}
 import xml.Node
 import java.util.UUID
 import spray.util._
-
+import net.liftweb.json._
 
 trait TupleBearing[T] {
   val tuple: T
@@ -35,6 +35,8 @@ abstract class OSCompanion[D <: TupleBearing[T], T](xmlName: String, xmlSeqName:
   def apply(json: JValue) = Helpers.tryo {
     json.extract[D](formats, mf)
   }
+
+  def fromJsonString(js: String) = apply(parse(js)).get
 
   def unapply(json: JValue): Option[D] = apply(json)
 
@@ -65,6 +67,8 @@ abstract class OSCompanion[D <: TupleBearing[T], T](xmlName: String, xmlSeqName:
    */
   implicit def toJson(objs: Seq[D]): JValue =
     Extraction.decompose(objs)
+
+  def toJsonString(obj: D): String = compact(render(toJson(obj)))
 
   /**
    * Provide an implicit unmarshaller for spray

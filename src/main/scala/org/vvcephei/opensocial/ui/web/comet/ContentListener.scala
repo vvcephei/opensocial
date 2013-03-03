@@ -2,14 +2,9 @@ package org.vvcephei.opensocial.ui.web.comet
 
 import net.liftweb._
 import http._
-import util._
-import org.vvcephei.opensocial.data.Content
+import org.vvcephei.opensocial.data.{TextPost, Content}
+import util.ClearClearable
 
-/**
- * The screen real estate on the browser will be represented
- * by this component. When the component changes on the server
- * the changes are automatically reflected in the browser.
- */
 class ContentListener extends CometActor with CometListener {
   private var msgs: Vector[Content] = Vector() // private state
 
@@ -30,13 +25,27 @@ class ContentListener extends CometActor with CometListener {
     case v: Vector[Content] => msgs = v; reRender()
   }
 
-  /**
-   * Put the messages in the li elements and clear
-   * any elements that have the clearable class.
-   */
-  def render = "li" #> msgs.map(c=>
-    <li>
-    <div>{c.data.get}</div>
-    <div>{c.date.get}</div>
-  </li>) & ClearClearable
+  def render = {
+    ".content" #> msgs.map(c => {
+        val (title, body) = if (c.app == Some(TextPost.registryKey)) {
+          val (t,b) = TextPost.fromJsonString(c.data.get).tuple
+          (Some(t),b.map(s => (<p>{s}</p>)))
+        } else {
+          (None, <p>{c.data.get}</p>)
+        }
+
+        <div class="content">
+          {if (title.isDefined)
+          <h4>
+            {title.get}
+          </h4>
+          }
+          <h6>
+            {c.date.get}
+          </h6>
+
+          {body}
+        </div>
+      }) & ClearClearable
+  }
 }
