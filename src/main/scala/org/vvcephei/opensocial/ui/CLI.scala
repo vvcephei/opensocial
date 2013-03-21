@@ -6,10 +6,13 @@ import spray.can.client.HttpClient
 import spray.client.HttpConduit
 import org.vvcephei.opensocial.uns.data.{FreesocialPersonData, Person}
 import org.vvcephei.opensocial.data.{Content, ContentKey}
+import org.vvcephei.opensocial.data.Content._
 import HttpConduit._
 import akka.dispatch.{Await, Future}
 import akka.util.duration._
 import org.vvcephei.opensocial.crypto.{EncryptResult, CryptoService}
+import spray.http.{HttpResponse, HttpRequest}
+import javax.ws.rs.core.UriBuilder
 
 
 object Http {
@@ -43,7 +46,27 @@ object Http {
 object FreesocialClient {
   implicit val system = Http.system
 
+  def addParam(key: String, value: String): HttpRequest => HttpRequest = (request) => {
+//    val newUri = UriBuilder.fromPath(request.uri).queryParam(key, value).build().toString
+    val newUri = request.uri + "?" + key + "=" + value
+    println(newUri)
+    request.copy(uri = newUri)
+  }
+
+  val printReq = (req: HttpRequest) => {
+    println("request: "+req.toString())
+    req
+  }
+
+  val printResp = (resp: HttpResponse) => {
+    println("response: "+resp)
+    resp
+  }
+
   def getPerson(personPath: String): Future[Person] = Http.pipe[Person]("localhost:8080").apply(Get("/api/uns/users:%s.json".format(personPath)))
+
+  def addContent(personPath: String, plainContent: Content): Future[Option[Content]] =
+    Post("/api/contents.json", plainContent) ~> addParam("user",personPath) ~> printReq ~> (sendReceive(Http.conduit("localhost:8080")) ~> printResp ~> unmarshal[Option[Content]])
 
   def getContentKeys(keyservers: List[String], personId: String, startIndex: Int, limit: Int): Future[List[ContentKey]] = {
     Future.sequence(keyservers.map(ks => getContentKeys(ks, personId, startIndex, limit))).map(_.flatten.toSet.toList.sortBy((_: ContentKey).date).reverse)

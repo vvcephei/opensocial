@@ -4,7 +4,7 @@ import net.liftweb._
 import http._
 import js._
 import JsCmds._
-import org.vvcephei.opensocial.ui.web.comet.{ContentServer, ChatServer}
+import org.vvcephei.opensocial.ui.web.comet.ContentServer
 
 
 /**
@@ -27,8 +27,12 @@ object ContentIn {
    * to the ChatServer and then returns JavaScript which
    * clears the input.
    */
-  def render = SHtml.onSubmit(s => {
-    ContentServer ! s
-    SetValById("content_in", "")
-  })
+  def render = {
+    val whence = S.uri.split('/').last
+    SHtml.onSubmit(s => {
+      val msg = (whence, s)
+      ContentServer ! msg
+      SetValById("content_in", "")
+    })
+  }
 }

@@ -4,7 +4,8 @@ import net.liftweb._
 import http._
 import actor._
 import org.vvcephei.opensocial.ui.FreesocialClient
-import org.vvcephei.opensocial.data.Content
+import org.vvcephei.opensocial.data.{TextPost, Content}
+import java.util.Date
 
 /**
  * A singleton that provides chat features to all clients.
@@ -28,6 +29,8 @@ object ContentServer extends LiftActor with ListenerManager {
    */
   def createUpdate = msgs
 
+  def log(s: Any) = println("ContentServer: " + s.toString)
+
   /**
    * process messages that are sent to the Actor. In
    * this case, we're looking for Strings that are sent
@@ -35,6 +38,19 @@ object ContentServer extends LiftActor with ListenerManager {
    * messages, and then update all the listeners.
    */
   override def lowPriority = {
-    case s: String => /*msgs :+= s; */ updateListeners()
+    case s: String =>
+      /*msgs :+= s; */ updateListeners()
+    case (s: String, m: String) =>
+      log((s, Content(None, Some(new Date()), app = Some(TextPost.registryKey), data = Some(m))))
+      FreesocialClient.addContent(s, Content(None, Some(new Date()), app = Some(TextPost.registryKey), data = Some(TextPost.toJsonString(TextPost("No Title", m::Nil)))))
+        .onSuccess({
+        case Some(content) =>
+          var tmp = msgs
+          msgs = msgs.+:(content)
+          updateListeners()
+      })
+        .onComplete(outcome => {
+        log(outcome)
+      })
   }
 }

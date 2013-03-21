@@ -1,14 +1,13 @@
 package org.vvcephei.opensocial.uns.data
 
-import net.liftweb.json.JsonAST.JValue
 import net.liftweb.util.Helpers
-import net.liftweb.json.{Xml, Extraction}
 import spray.httpx.unmarshalling.Unmarshaller
-import spray.http.{HttpBody, MediaTypes}
+import spray.http.{ContentType, HttpBody, MediaTypes}
 import xml.Node
 import java.util.UUID
 import spray.util._
 import net.liftweb.json._
+import spray.httpx.marshalling.Marshaller
 
 trait TupleBearing[T] {
   val tuple: T
@@ -70,6 +69,10 @@ abstract class OSCompanion[D <: TupleBearing[T], T](xmlName: String, xmlSeqName:
 
   def toJsonString(obj: D): String = compact(render(toJson(obj)))
 
+  implicit val contentMarshaller = Marshaller.of[D](ContentType.`application/json`) {
+    case (content, contentType, context) =>
+      context.marshalTo(HttpBody(contentType, compact(render(toJson(content)))))
+  }
   /**
    * Provide an implicit unmarshaller for spray
    */

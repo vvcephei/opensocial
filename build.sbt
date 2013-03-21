@@ -17,5 +17,6 @@ libraryDependencies ++= Seq("net.liftweb" %% "lift-webkit" % "2.4" % "compile",
                         "org.scalatest" %% "scalatest" % "1.8" % "test",
                         "com.google.inject" % "guice" % "3.0",
                         "io.spray" % "spray-client" % "1.0-M7",
-                        "com.typesafe.akka" % "akka-actor" % "2.0.5")
+                        "com.typesafe.akka" % "akka-actor" % "2.0.5",
+                        "com.sun.jersey" % "jersey-core" % "1.17")
 
